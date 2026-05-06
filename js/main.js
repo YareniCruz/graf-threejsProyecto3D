@@ -85,7 +85,7 @@ function init() {
     });
 
     const loader = new FBXLoader();
-    loader.setPath('assets/');
+    loader.setPath('./assets/');
 
     // PLAYER
     loader.load('Running.fbx', (fbx) => {
