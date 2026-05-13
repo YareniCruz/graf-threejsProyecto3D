@@ -112,7 +112,7 @@ function init() {
         player = fbx;
         player.scale.set(0.015, 0.015, 0.015);
 
-        player.position.set(0, -3.3, 0.3);
+        player.position.set(0, -3.3, 0.9);
         playerGroup.add(player);
 
         player.rotation.y = Math.PI;
@@ -134,7 +134,7 @@ function init() {
     // ALIEN
     loader.load('AlienAttack2.fbx', (fbx) => {
         alienModel = fbx;
-        alienModel.scale.set(0.04, 0.04, 0.04);
+        alienModel.scale.set(0.025, 0.025, 0.025);
 
         // Guardamos la animación que viene dentro del archivo
         if (fbx.animations && fbx.animations.length > 0) {
