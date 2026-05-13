@@ -70,7 +70,7 @@ function init() {
 
     // Creamos un grupo para el jugador y la cámara para moverlos juntos en VR
     playerGroup = new THREE.Group(); 
-    playerGroup.position.set(0, 2.5, 12);
+    playerGroup.position.set(0, 0, 12);
     scene.add(playerGroup)
 
     // La cámara debe estar dentro del grupo para VR
@@ -111,7 +111,12 @@ function init() {
     loader.load('Running.fbx', (fbx) => {
         player = fbx;
         player.scale.set(0.015, 0.015, 0.015);
+
+        player.position.set(0, -3.3, 0.3);
+        playerGroup.add(player);
+
         player.rotation.y = Math.PI;
+        //player.rotation.y = 0;
 
         player.traverse(c => { if (c.isMesh) c.castShadow = true; });
 
@@ -163,6 +168,7 @@ function init() {
     scene.add(controllerRight);
 
     renderer.xr.setReferenceSpaceType('local-floor');
+    
 
     // Escuchar el "Gatillo" para acciones rápidas
     controllerRight.addEventListener('selectstart', () => {
@@ -338,9 +344,8 @@ function animate() {
     if (mixer) mixer.update(delta);
 
     if (player) {
-        playerGroup.position.x += (targetX - playerGroup.position.x) * 10 * delta;
+        //playerGroup.position.x += (targetX - playerGroup.position.x) * 10 * delta;
         //player.position.x += (targetX - player.position.x) * 10 * delta;
-        //player.rotation.y += (targetRotation - player.rotation.y) * 10 * delta;
     }
 
     if (floor && floor.material.map) {
