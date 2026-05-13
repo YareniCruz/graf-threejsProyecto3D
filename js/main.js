@@ -70,9 +70,11 @@ function init() {
 
     // Creamos un grupo para el jugador y la cámara para moverlos juntos en VR
     playerGroup = new THREE.Group(); 
+    playerGroup.position.set(0, 2.5, 12);
     scene.add(playerGroup)
 
     // La cámara debe estar dentro del grupo para VR
+    camera.position.set(0, 0, 0);
     playerGroup.add(camera);
 
     // Luces
@@ -125,7 +127,7 @@ function init() {
     });
 
     // ALIEN
-    loader.load('AlienAttack.fbx', (fbx) => {
+    loader.load('AlienAttack2.fbx', (fbx) => {
         alienModel = fbx;
         alienModel.scale.set(0.04, 0.04, 0.04);
 
@@ -159,6 +161,8 @@ function init() {
 
     controllerRight = renderer.xr.getController(1);
     scene.add(controllerRight);
+
+    renderer.xr.setReferenceSpaceType('local-floor');
 
     // Escuchar el "Gatillo" para acciones rápidas
     controllerRight.addEventListener('selectstart', () => {
@@ -334,8 +338,9 @@ function animate() {
     if (mixer) mixer.update(delta);
 
     if (player) {
-        player.position.x += (targetX - player.position.x) * 10 * delta;
-        player.rotation.y += (targetRotation - player.rotation.y) * 10 * delta;
+        playerGroup.position.x += (targetX - playerGroup.position.x) * 10 * delta;
+        //player.position.x += (targetX - player.position.x) * 10 * delta;
+        //player.rotation.y += (targetRotation - player.rotation.y) * 10 * delta;
     }
 
     if (floor && floor.material.map) {
