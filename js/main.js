@@ -3,6 +3,9 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
+// Importación para el botón de VR
+import { VRButton } from 'three/addons/webxr/VRButton.js';
+
 let isGamePlaying = false; // Empezamos en falso para que inicie pausado
 //Escuchamos cuando el botón Start es presionado
 window.addEventListener('iniciarJuego', () => {
@@ -24,6 +27,11 @@ let targetRotation = Math.PI;
 
 let alienAnimClip;
 
+let playerGroup;
+
+//controles
+let controllerLeft, controllerRight;
+
 // Variables de lógica del juego
 let distancia = 0;
 let vida = 100;
@@ -42,6 +50,7 @@ init();
 animate();
 
 function init() {
+    clock = new THREE.Clock();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xcccccc);
     scene.fog = new THREE.Fog(0xcccccc, 15, 60);
@@ -53,9 +62,18 @@ function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
+    // --- VR ---
+    renderer.xr.enabled = true; // Habilita WebXR
+    document.body.appendChild(VRButton.createButton(renderer)); // Crea el botón
+
     document.getElementById('container').appendChild(renderer.domElement);
 
-    clock = new THREE.Clock();
+    // Creamos un grupo para el jugador y la cámara para moverlos juntos en VR
+    playerGroup = new THREE.Group(); 
+    scene.add(playerGroup)
+
+    // La cámara debe estar dentro del grupo para VR
+    playerGroup.add(camera);
 
     // Luces
     const light = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -67,7 +85,7 @@ function init() {
     // Suelo
     const textureLoader = new THREE.TextureLoader();
     const floorMat = new THREE.MeshStandardMaterial({ 
-        map: textureLoader.load('textures/suelo.jpg') 
+        map: textureLoader.load('textures/suelo_obscuro.jpg') 
     });
     floorMat.map.wrapS = floorMat.map.wrapT = THREE.RepeatWrapping;
     floorMat.map.repeat.set(1, 10);
@@ -95,7 +113,7 @@ function init() {
 
         player.traverse(c => { if (c.isMesh) c.castShadow = true; });
 
-        scene.add(player);
+        playerGroup.add(player);
 
         targetX = lanes[currentLane]; // inicial
         targetRotation = Math.PI;
@@ -134,6 +152,22 @@ function init() {
     });
 
     window.addEventListener('keydown', onKeyDown);
+    
+    // Configuración de mandos
+    controllerLeft = renderer.xr.getController(0);
+    scene.add(controllerLeft);
+
+    controllerRight = renderer.xr.getController(1);
+    scene.add(controllerRight);
+
+    // Escuchar el "Gatillo" para acciones rápidas
+    controllerRight.addEventListener('selectstart', () => {
+        fadeToAction('patada', 0.1); // El gatillo derecho lanza patada
+    });
+    
+    controllerLeft.addEventListener('selectstart', () => {
+        fadeToAction('saltar', 0.1); // El gatillo izquierdo salta
+    });
 }
 
 function spawnObstacle() {
@@ -241,8 +275,42 @@ function spawnDecoration() {
     decorations.push(rock);
 }
 
+function handleVRInput() {
+    const session = renderer.xr.getSession();
+    if (!session) return;
+
+    // Recorremos las fuentes de entrada (los mandos)
+    for (const source of session.inputSources) {
+        if (!source.gamepad) continue;
+
+        // Ejes del stick: [0] es Horizontal (Izquierda/Derecha), [1] es Vertical
+        const axes = source.gamepad.axes;
+        const stickX = axes[2] || axes[0]; // Depende del modelo de gafas puede ser eje 2 o 0
+
+        // Sensibilidad para evitar movimientos accidentales (Deadzone)
+        if (Math.abs(stickX) > 0.5) {
+            if (stickX < -0.5 && currentLane > 0) { // Izquierda
+                currentLane--;
+                movePlayer();
+                // Bloqueo temporal para que no cambie de carril infinitamente rápido
+                canMoveVR = false; 
+                setTimeout(() => { canMoveVR = true; }, 300);
+            } 
+            else if (stickX > 0.5 && currentLane < 2) { // Derecha
+                currentLane++;
+                movePlayer();
+                canMoveVR = false;
+                setTimeout(() => { canMoveVR = true; }, 300);
+            }
+        }
+    }
+}
+
+// Variable para el control de velocidad de cambio de carril en VR
+let canMoveVR = true;
+
 function animate() {
-    requestAnimationFrame(animate);
+    renderer.setAnimationLoop(animate);
     
     // Si no estamos jugando o ya perdimos, congelamos la lógica
     if (!isGamePlaying || isGameOver) {
@@ -250,6 +318,12 @@ function animate() {
         renderer.render(scene, camera);
         return; 
     }
+
+    // --- LEER ENTRADA DE GAFAS ---
+    if (renderer.xr.isPresenting && canMoveVR) {
+        handleVRInput();
+    }
+    // -----------------------------
 
     const delta = clock.getDelta();
 
@@ -316,7 +390,7 @@ function animate() {
             );
             obs.userData.kicked = false;
             
-            // 🔥 NUEVO: Reiniciamos la colisión para cuando vuelva a aparecer
+            // Reiniciamos la colisión para cuando vuelva a aparecer
             obs.userData.crashed = false; 
         }
     });
