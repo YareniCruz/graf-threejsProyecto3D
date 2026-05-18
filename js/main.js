@@ -10,6 +10,10 @@ let isGamePlaying = false;
 window.addEventListener('iniciarJuego', () => {
     isGamePlaying = true;
     clock.start(); 
+
+    if (musicaFondo && !musicaFondo.isPlaying) {
+        musicaFondo.play();
+    }
 });
 
 let scene, camera, renderer, clock, mixer;
@@ -41,6 +45,10 @@ let isGameOver = false;
 // Objetos
 let decorations = [];
 
+let listener;
+let musicaFondo;
+let sonidoPatada;
+
 // Vectores auxiliares para calcular colisiones globales en VR sin perder rendimiento
 const posGlobalObstaculo = new THREE.Vector3();
 const posGlobalJugador = new THREE.Vector3();
@@ -67,6 +75,13 @@ function init() {
     
     // --- VR CONFIG ---
     renderer.xr.enabled = true; 
+
+    window.rendererVR = renderer; 
+
+    document.body.appendChild(VRButton.createButton(renderer, {
+        optionalFeatures: ['local-floor', 'bounded-floor', 'dom-overlay'],
+        domOverlay: { root: document.getElementById('container') } 
+    }));
 
     document.body.appendChild(VRButton.createButton(renderer, {
     optionalFeatures: ['local-floor', 'bounded-floor', 'dom-overlay'],
@@ -113,6 +128,25 @@ function init() {
 
     const loader = new FBXLoader();
     loader.setPath('./assets/');
+
+    //AUDIO
+    listener = new THREE.AudioListener();
+    camera.add(listener); 
+
+    musicaFondo = new THREE.Audio(listener);
+
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load('assets/audio.mp3', (buffer) => {
+        musicaFondo.setBuffer(buffer);
+        musicaFondo.setLoop(true); // Para que se repita infinitamente
+        musicaFondo.setVolume(0.7); // Volumen bajo para que no sature (0.0 a 1.0)
+    });
+
+    sonidoPatada = new THREE.Audio(listener);
+    audioLoader.load('assets/patada.mp3', (buffer) => {
+        sonidoPatada.setBuffer(buffer);
+        sonidoPatada.setVolume(0.6);
+    });
 
     // PLAYER
     loader.load('Running.fbx', (fbx) => {
@@ -236,11 +270,14 @@ function recibirDano() {
         isGameOver = true;
         pantallaGameOver.style.display = 'flex'; 
         puntajeFinal.innerText = `Metros recorridos: ${Math.floor(distancia)}`;
+        if (musicaFondo && musicaFondo.isPlaying) {
+            musicaFondo.stop();
+        }
     }
 }
 
 function spawnDecoration() {
-    const size = 2; 
+    const size = 0.6; 
     const geometry = new THREE.DodecahedronGeometry(size);
     const material = new THREE.MeshStandardMaterial({ 
         color: 0x555555, 
@@ -395,6 +432,11 @@ function fadeToAction(name, duration) {
     //Si la acción es la patada, activamos el interruptor
     if (name === 'patada') {
         isKicking = true;
+
+        if (sonidoPatada) {
+            if (sonidoPatada.isPlaying) sonidoPatada.stop(); // Si ya estaba sonando, lo reinicia
+            sonidoPatada.play();
+        }
     }
 
     if (name !== 'correr') {

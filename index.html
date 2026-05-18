@@ -136,7 +136,7 @@ body {
     height: 100%;
 }
 
-/* 🔥 NUEVOS ESTILOS PARA LA INTERFAZ EN VR (Fijos y de Máxima Prioridad) */
+
 #ui-container {
     display: none; 
     position: fixed !important; /* Fixed asegura que permanezca visible ante cambios del viewport de VR */
@@ -249,7 +249,26 @@ function exitGame(){
 document.getElementById('startBtn').addEventListener('click', () => {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('ui-container').style.display = 'block';
+
     window.dispatchEvent(new Event('iniciarJuego'));
+
+    if (window.rendererVR) {
+        navigator.xr.isSessionSupported('immersive-vr')
+            .then((supported) => {
+                if (supported) {
+                    
+                    const vrButton = document.getElementById('VRButton');
+                    if (vrButton) {
+                        vrButton.click(); 
+                    }
+                } else {
+                    console.log("WebXR Immersive VR no soportado en este dispositivo/navegador.");
+                }
+            })
+            .catch((err) => {
+                console.error("Error al comprobar soporte de WebXR:", err);
+            });
+    }
 });
 </script>
 
